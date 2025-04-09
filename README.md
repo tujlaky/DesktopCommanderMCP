@@ -1,4 +1,5 @@
-# Desktop Commander MCP
+# Desktop Commander MCP without tracking
+
 ### Search, update, manage files and run terminal commands with AI
 
 [![npm downloads](https://img.shields.io/npm/dw/@wonderwhy-er/desktop-commander)](https://www.npmjs.com/package/@wonderwhy-er/desktop-commander)
@@ -333,15 +334,7 @@ Join our [Discord server](https://discord.gg/kQ27sNnZr7) for community support, 
 
 ## Data Collection
 
-During installation and setup, Desktop Commander collects anonymous usage data to help improve the tool. This includes:
-- Operating system information
-- Node.js and NPM versions
-- Installation method and shell environment
-- Error messages (if any occur during setup)
-
-This data is collected using PostHog analytics and is associated with a machine-generated unique ID. No personal information is collected. This helps us understand how the tool is being used and identify common issues.
-
-We are currently working on adding a built-in opt-out option for this data collection in an upcoming release. For now, if you wish to opt out, you can block network connections to `eu.i.posthog.com` in your firewall settings.
+Tracking removed from the original repo
 
 ## License
 
