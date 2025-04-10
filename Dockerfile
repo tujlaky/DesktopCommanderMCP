@@ -10,6 +10,8 @@ COPY package*.json ./
 # Install dependencies without triggering any unwanted scripts
 RUN npm install --ignore-scripts
 
+RUN node ./node_modules/@vscode/ripgrep/lib/postinstall.js
+
 # Copy all source code
 COPY . .
 
