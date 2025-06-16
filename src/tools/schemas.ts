@@ -1,13 +1,26 @@
 import { z } from "zod";
 
+// Config tools schemas
+export const GetConfigArgsSchema = z.object({});
+
+export const SetConfigValueArgsSchema = z.object({
+  key: z.string(),
+  value: z.any(),
+});
+
+// Empty schemas
+export const ListProcessesArgsSchema = z.object({});
+
 // Terminal tools schemas
 export const ExecuteCommandArgsSchema = z.object({
   command: z.string(),
-  timeout_ms: z.number().optional(),
+  timeout_ms: z.number(),
+  shell: z.string().optional(),
 });
 
 export const ReadOutputArgsSchema = z.object({
   pid: z.number(),
+  timeout_ms: z.number().optional(),
 });
 
 export const ForceTerminateArgsSchema = z.object({
@@ -20,18 +33,12 @@ export const KillProcessArgsSchema = z.object({
   pid: z.number(),
 });
 
-export const BlockCommandArgsSchema = z.object({
-  command: z.string(),
-});
-
-export const UnblockCommandArgsSchema = z.object({
-  command: z.string(),
-});
-
 // Filesystem tools schemas
 export const ReadFileArgsSchema = z.object({
   path: z.string(),
   isUrl: z.boolean().optional().default(false),
+  offset: z.number().optional().default(0),
+  length: z.number().optional().default(1000),
 });
 
 export const ReadMultipleFilesArgsSchema = z.object({
@@ -41,6 +48,7 @@ export const ReadMultipleFilesArgsSchema = z.object({
 export const WriteFileArgsSchema = z.object({
   path: z.string(),
   content: z.string(),
+  mode: z.enum(['rewrite', 'append']).default('rewrite'),
 });
 
 export const CreateDirectoryArgsSchema = z.object({
@@ -78,7 +86,10 @@ export const SearchCodeArgsSchema = z.object({
   timeoutMs: z.number().optional(),
 });
 
-// Edit tools schemas
+// Edit tools schema
 export const EditBlockArgsSchema = z.object({
-  blockContent: z.string(),
+  file_path: z.string(),
+  old_string: z.string(),
+  new_string: z.string(),
+  expected_replacements: z.number().optional().default(1),
 });

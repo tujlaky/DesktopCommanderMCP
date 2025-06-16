@@ -1,6 +1,8 @@
 import { spawn } from 'child_process';
 import { TerminalSession, CommandExecutionResult, ActiveSession } from './types.js';
 import { DEFAULT_COMMAND_TIMEOUT } from './config.js';
+import { configManager } from './config-manager.js';
+import {capture} from "./utils/capture.js";
 
 interface CompletedSession {
   pid: number;
@@ -14,8 +16,24 @@ export class TerminalManager {
   private sessions: Map<number, TerminalSession> = new Map();
   private completedSessions: Map<number, CompletedSession> = new Map();
   
-  async executeCommand(command: string, timeoutMs: number = DEFAULT_COMMAND_TIMEOUT): Promise<CommandExecutionResult> {
-    const process = spawn(command, [], { shell: true });
+  async executeCommand(command: string, timeoutMs: number = DEFAULT_COMMAND_TIMEOUT, shell?: string): Promise<CommandExecutionResult> {
+    // Get the shell from config if not specified
+    let shellToUse: string | boolean | undefined = shell;
+    if (!shellToUse) {
+      try {
+        const config = await configManager.getConfig();
+        shellToUse = config.defaultShell || true;
+      } catch (error) {
+        // If there's an error getting the config, fall back to default
+        shellToUse = true;
+      }
+    }
+    
+    const spawnOptions = { 
+      shell: shellToUse
+    };
+    
+    const process = spawn(command, [], spawnOptions);
     let output = '';
     
     // Ensure process.pid is defined before proceeding
@@ -108,6 +126,15 @@ export class TerminalManager {
     return null;
   }
 
+    /**
+   * Get a session by PID
+   * @param pid Process ID
+   * @returns The session or undefined if not found
+   */
+  getSession(pid: number): TerminalSession | undefined {
+    return this.sessions.get(pid);
+  }
+
   forceTerminate(pid: number): boolean {
     const session = this.sessions.get(pid);
     if (!session) {
@@ -115,17 +142,19 @@ export class TerminalManager {
     }
 
     try {
-      session.process.kill('SIGINT');
-      setTimeout(() => {
-        if (this.sessions.has(pid)) {
-          session.process.kill('SIGKILL');
-        }
-      }, 1000);
-      return true;
-    } catch (error) {
-      console.error(`Failed to terminate process ${pid}:`, error);
-      return false;
-    }
+        session.process.kill('SIGINT');
+        setTimeout(() => {
+          if (this.sessions.has(pid)) {
+            session.process.kill('SIGKILL');
+          }
+        }, 1000);
+        return true;
+      } catch (error) {
+        // Convert error to string, handling both Error objects and other types
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        capture('server_request_error', {error: errorMessage, message: `Failed to terminate process ${pid}:`});
+        return false;
+      }
   }
 
   listActiveSessions(): ActiveSession[] {

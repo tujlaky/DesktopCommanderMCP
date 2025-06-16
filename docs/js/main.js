@@ -69,48 +69,71 @@ function openTab(evt, tabName) {
 
 // Make the openTab function available globally
 window.openTab = openTab;
+// Initialize first FAQ item as open if it exists
+const firstAccordionItem = document.querySelector('.accordion-item');
+if (firstAccordionItem) {
+    firstAccordionItem.classList.add('active');
+}
 
-// Initialize any elements that require it
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize first FAQ item as open if it exists
-    const firstAccordionItem = document.querySelector('.accordion-item');
-    if (firstAccordionItem) {
-        firstAccordionItem.classList.add('active');
-    }
-    
-    // Mobile menu toggle
-    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
-    const nav = document.querySelector('nav');
-    
-    if (mobileMenuBtn) {
-        mobileMenuBtn.addEventListener('click', function() {
-            nav.classList.toggle('active');
-            this.classList.toggle('active');
-        });
-    }
-    
-    // Accordion functionality
-    const accordionHeaders = document.querySelectorAll('.accordion-header');
-    
-    accordionHeaders.forEach(header => {
-        header.addEventListener('click', function() {
-            const accordionItem = this.parentElement;
-            const accordionBody = this.nextElementSibling;
-            
-            accordionItem.classList.toggle('active');
-            
-            // Toggle height 
-            if (accordionItem.classList.contains('active')) {
-                accordionBody.style.maxHeight = accordionBody.scrollHeight + 'px';
-            } else {
-                accordionBody.style.maxHeight = '0';
-            }
-        });
+// Mobile menu toggle
+const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+const mobileNav = document.querySelector('.mobile-nav');
+
+if (mobileMenuBtn && mobileNav) {
+    mobileMenuBtn.addEventListener('click', function() {
+        mobileNav.classList.toggle('active');
+        this.setAttribute('aria-expanded', mobileNav.classList.contains('active'));
     });
-    
-    // Initialize testimonial carousel
-    initTestimonialCarousel();
+}
+
+// Dropdown toggle for both mobile and desktop
+const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+
+dropdownToggles.forEach(toggle => {
+    toggle.addEventListener('click', function(e) {
+        // Only prevent default for mobile view
+        if (window.innerWidth <= 768) {
+            e.preventDefault();
+            const parentDropdown = this.parentElement;
+            
+            // Close other open dropdowns
+            document.querySelectorAll('.dropdown').forEach(dropdown => {
+                if (dropdown !== parentDropdown) {
+                    dropdown.classList.remove('active');
+                }
+            });
+            
+            // Toggle current dropdown
+            parentDropdown.classList.toggle('active');
+        } else {
+            // For desktop, still prevent default but don't toggle active class
+            // (hover will handle this instead)
+            e.preventDefault();
+        }
+    });
 });
+
+// Accordion functionality
+const accordionHeaders = document.querySelectorAll('.accordion-header');
+
+accordionHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+        const accordionItem = this.parentElement;
+        const accordionBody = this.nextElementSibling;
+        
+        accordionItem.classList.toggle('active');
+        
+        // Toggle height 
+        if (accordionItem.classList.contains('active')) {
+            accordionBody.style.maxHeight = accordionBody.scrollHeight + 'px';
+        } else {
+            accordionBody.style.maxHeight = '0';
+        }
+    });
+});
+
+// Initialize testimonial carousel
+initTestimonialCarousel();
 
 // Testimonial Carousel Implementation
 function initTestimonialCarousel() {
@@ -293,17 +316,26 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         
         const target = document.querySelector(this.getAttribute('href'));
         if (target) {
+            // Extra offset for section IDs that are inside the cases section
+            const isSubsection = this.getAttribute('href').startsWith('#cases-');
+            const offset = isSubsection ? 120 : 80;
+            
             window.scrollTo({
-                top: target.offsetTop - 80,
+                top: target.offsetTop - offset,
                 behavior: 'smooth'
             });
         }
         
         // Close mobile menu if open
-        const nav = document.querySelector('nav');
-        if (nav && nav.classList.contains('active')) {
-            nav.classList.remove('active');
+        const mobileNav = document.querySelector('.mobile-nav');
+        if (mobileNav && mobileNav.classList.contains('active')) {
+            mobileNav.classList.remove('active');
         }
+        
+        // Close any open dropdowns
+        document.querySelectorAll('.dropdown').forEach(dropdown => {
+            dropdown.classList.remove('active');
+        });
     });
 });
 
@@ -314,3 +346,81 @@ window.addEventListener('scroll', () => {
         header.classList.toggle('sticky', window.scrollY > 0);
     }
 });
+
+// Close mobile menu when window resizes to desktop width
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        const mobileNav = document.querySelector('.mobile-nav');
+        if (mobileNav && mobileNav.classList.contains('active')) {
+            mobileNav.classList.remove('active');
+        }
+    }
+});
+
+// Add copy button only to pre elements under installation section
+function addCopyButtons() {
+    const preElements = document.querySelectorAll('#installation pre');
+    
+    preElements.forEach(pre => {
+        // Create container to hold the pre and button
+        const container = document.createElement('div');
+        container.className = 'pre-container';
+        pre.parentNode.insertBefore(container, pre);
+        container.appendChild(pre);
+        
+        // Create the copy button
+        const copyButton = document.createElement('button');
+        copyButton.className = 'copy-button';
+        copyButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-copy"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        copyButton.title = 'Copy to clipboard';
+        copyButton.setAttribute('aria-label', 'Copy to clipboard');
+        container.appendChild(copyButton);
+        
+        // Add click event to the button
+        copyButton.addEventListener('click', () => {
+            const text = pre.textContent;
+            
+            // Create a temporary textarea element to use for copying
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            
+            // Handle iOS devices
+            if (navigator.userAgent.match(/ipad|ipod|iphone/i)) {
+                const range = document.createRange();
+                range.selectNodeContents(textarea);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                textarea.setSelectionRange(0, 999999);
+            } else {
+                textarea.select();
+            }
+            
+            try {
+                const successful = document.execCommand('copy');
+                const msg = successful ? 'Copied!' : 'Failed to copy';
+                
+                // Visual feedback
+                copyButton.classList.add('copied');
+                copyButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                
+                // Revert back after 2 seconds
+                setTimeout(() => {
+                    copyButton.classList.remove('copied');
+                    copyButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-copy"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Could not copy text: ', err);
+            }
+            
+            document.body.removeChild(textarea);
+        });
+    });
+}
+
+addCopyButtons();
