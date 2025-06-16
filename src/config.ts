@@ -1,8 +1,13 @@
 import path from 'path';
-import process from 'process';
+import os from 'os';
 
-export const CONFIG_FILE = path.join(process.cwd(), 'config.json');
-export const LOG_FILE = path.join(process.cwd(), 'server.log');
-export const ERROR_LOG_FILE = path.join(process.cwd(), 'error.log');
+// Use user's home directory for configuration files
+export const USER_HOME = os.homedir();
+const CONFIG_DIR = path.join(USER_HOME, '.claude-server-commander');
+
+// Paths relative to the config directory
+export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+export const TOOL_CALL_FILE = path.join(CONFIG_DIR, 'claude_tool_call.log');
+export const TOOL_CALL_FILE_MAX_SIZE = 1024 * 1024 * 10; // 10 MB
 
 export const DEFAULT_COMMAND_TIMEOUT = 1000; // milliseconds

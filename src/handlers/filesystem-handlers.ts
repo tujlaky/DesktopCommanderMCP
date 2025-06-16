@@ -7,14 +7,14 @@ import {
     moveFile,
     searchFiles,
     getFileInfo,
-    listAllowedDirectories,
     type FileResult,
     type MultiFileResult
 } from '../tools/filesystem.js';
 
-import { ServerResult } from '../types.js';
-import { withTimeout } from '../utils.js';
-import { createErrorResponse } from '../error-handlers.js';
+import {ServerResult} from '../types.js';
+import {withTimeout} from '../utils/withTimeout.js';
+import {createErrorResponse} from '../error-handlers.js';
+import {configManager} from '../config-manager.js';
 
 import {
     ReadFileArgsSchema,
@@ -46,11 +46,26 @@ function getErrorFromPath(path: string): string {
  */
 export async function handleReadFile(args: unknown): Promise<ServerResult> {
     const HANDLER_TIMEOUT = 60000; // 60 seconds total operation timeout
-    
+    // Add input validation
+    if (args === null || args === undefined) {
+        return createErrorResponse('No arguments provided for read_file command');
+    }
     const readFileOperation = async () => {
         const parsed = ReadFileArgsSchema.parse(args);
-        // Explicitly cast the result to FileResult since we're passing true
-        const fileResult = await readFile(parsed.path, true, parsed.isUrl) as FileResult;
+
+        // Get the configuration for file read limits
+        const config = await configManager.getConfig();
+        if (!config) {
+            return createErrorResponse('Configuration not available');
+        }
+
+        const defaultLimit = config.fileReadLineLimit ?? 1000;
+
+        // Use the provided limits or defaults
+        const offset = parsed.offset ?? 0;
+        const length = parsed.length ?? defaultLimit;
+        
+        const fileResult = await readFile(parsed.path, parsed.isUrl, offset, length);
         
         if (fileResult.isImage) {
             // For image files, return as an image content type
@@ -76,14 +91,17 @@ export async function handleReadFile(args: unknown): Promise<ServerResult> {
     };
     
     // Execute with timeout at the handler level
-    return await withTimeout(
+    const result = await withTimeout(
         readFileOperation(),
         HANDLER_TIMEOUT,
         'Read file handler operation',
-        {
-            content: [{ type: "text", text: `Operation timed out after ${HANDLER_TIMEOUT/1000} seconds. The file might be too large or on a slow/unresponsive storage device.` }],
-        }
+        null
     );
+    if (result == null) {
+        // Handles the impossible case where withTimeout resolves to null instead of throwing
+        throw new Error('Failed to read the file');
+    }
+    return result;
 }
 
 /**
@@ -139,10 +157,32 @@ export async function handleReadMultipleFiles(args: unknown): Promise<ServerResu
 export async function handleWriteFile(args: unknown): Promise<ServerResult> {
     try {
         const parsed = WriteFileArgsSchema.parse(args);
-        await writeFile(parsed.path, parsed.content);
+
+        // Get the line limit from configuration
+        const config = await configManager.getConfig();
+        const MAX_LINES = config.fileWriteLineLimit ?? 50; // Default to 50 if not set
+        
+        // Strictly enforce line count limit
+        const lines = parsed.content.split('\n');
+        const lineCount = lines.length;
+        let errorMessage = "";
+        if (lineCount > MAX_LINES) {
+            errorMessage = `✅ File written successfully! (${lineCount} lines)
+            
+💡 Performance tip: For optimal speed, consider chunking files into ≤30 line pieces in future operations.`;
+        }
+
+        // Pass the mode parameter to writeFile
+        await writeFile(parsed.path, parsed.content, parsed.mode);
+        
+        // Provide more informative message based on mode
+        const modeMessage = parsed.mode === 'append' ? 'appended to' : 'wrote to';
         
         return {
-            content: [{ type: "text", text: `Successfully wrote to ${parsed.path}` }],
+            content: [{ 
+                type: "text", 
+                text: `Successfully ${modeMessage} ${parsed.path} (${lineCount} lines) ${errorMessage}`
+            }],
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -261,15 +301,5 @@ export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
     }
 }
 
-/**
- * Handle list_allowed_directories command
- */
-export function handleListAllowedDirectories(): ServerResult {
-    const directories = listAllowedDirectories();
-    return {
-        content: [{ 
-            type: "text", 
-            text: `Allowed directories:\n${directories.join('\n')}` 
-        }],
-    };
-}
+// The listAllowedDirectories function has been removed
+// Use get_config to retrieve the allowedDirectories configuration
