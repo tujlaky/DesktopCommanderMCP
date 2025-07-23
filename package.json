@@ -1,6 +1,6 @@
 {
   "name": "@wonderwhy-er/desktop-commander",
-  "version": "0.2.3",
+  "version": "0.2.7",
   "description": "MCP server for terminal operations and file editing",
   "license": "MIT",
   "author": "Eduards Ruzga",
@@ -20,6 +20,7 @@
     "testemonials"
   ],
   "scripts": {
+    "open-chat": "open -n /Applications/Claude.app",
     "sync-version": "node scripts/sync-version.js",
     "bump": "node scripts/sync-version.js --bump",
     "bump:minor": "node scripts/sync-version.js --bump --minor",
@@ -31,6 +32,7 @@
     "setup": "npm install && npm run build && node setup-claude-server.js",
     "setup:debug": "npm install && npm run build && node setup-claude-server.js --debug",
     "prepare": "npm run build",
+    "clean": "shx rm -rf dist",
     "test": "node test/run-all-tests.js",
     "test:debug": "node --inspect test/run-all-tests.js",
     "link:local": "npm run build && npm link",
@@ -69,6 +71,7 @@
     "cross-fetch": "^4.1.0",
     "fastest-levenshtein": "^1.0.16",
     "glob": "^10.3.10",
+    "isbinaryfile": "^5.0.4",
     "zod": "^3.24.1",
     "zod-to-json-schema": "^3.23.5"
   },
